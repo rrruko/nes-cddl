@@ -1,0 +1,521 @@
+new_epoch_state =
+  [
+    modified_last : epoch_no,
+    blocks_made_before_previous_epoch : blocks_made,
+    blocks_made_in_current_epoch : blocks_made,
+    epoch_state : epoch_state,
+    reward_update : strict_maybe<pulsing_rew_update>,
+    pool_distribution : pool_distr,
+    stashed_avvm_addresses : stashed_avvm_addresses
+  ]
+blocks_made = { * key_hash<stake_pool> => uint }
+pulsing_rew_update = 
+  [ 
+    0, ; pulsing
+    snapshot : reward_snapshot,
+    pulser : pulser
+  ] / 
+  [ 
+    1, ; complete
+    reward_update : reward_update
+  ]
+reward_snapshot =
+  [
+    fees : coin,
+    prot_ver : prot_ver,
+    non_myopic : non_myopic,
+    delta_r1 : coin,
+    r : coin,
+    delta_t1 : coin,
+    likelihoods : { * key_hash<stake_pool> => likelihood },
+    leaders : { * credential<staking> => set<reward> }
+  ]
+likelihood = [float]
+pulser =
+  [
+    n : int,
+    free : freevars,
+    balance : { * credential<staking> => compactform_coin },
+    ans : reward_ans
+  ]
+freevars = 
+  [
+    delegs : { * credential<staking> => key_hash<stake_pool> },
+    addrs_rew : set<credential<staking>>,
+    total_stake : coin,
+    prot_ver : prot_ver,
+    pool_reward_info : { * key_hash<stake_pool> => pool_reward_info }
+  ]
+prot_ver =
+  [
+    pv_major : version,
+    pv_minor : int
+  ]
+version = int
+pool_reward_info =
+  [
+    stake_share : stake_share,
+    pot : coin,
+    ps : pool_params,
+    blocks : uint,
+    leader_reward : leader_only_reward,
+  ]
+stake_share = rational
+leader_only_reward =
+  [
+    pool : key_hash<stake_pool>,
+    reward_amount : coin
+  ]
+reward_ans =
+  [
+    accum_reward_ans : { * credential<staking> => reward },
+    recent_reward_ans : reward_event
+  ]
+reward = 
+  [
+    reward_type : reward_type,
+    reward_pool : key_hash<stake_pool>,
+    reward_amount : coin,
+  ]
+reward_type = 0 / 1
+reward_event = { * credential<staking> => set<reward> }
+reward_update =
+  [
+    dt : delta_coin,
+    invert_dr : delta_coin,
+    rw : { * credential<staking> => set<reward> },
+    invert_df : delta_coin,
+    nm : non_myopic,
+  ]
+stashed_avvm_addresses = null
+epoch_state = 
+  [
+    account_state,
+    ledger_state,
+    snapshots,
+    non_myopic,
+  ]
+account_state = 
+  [
+    treasury : coin,
+    reserves : coin,
+  ]
+snapshots = 
+  [
+    stake_mark : snapshot,
+    stake_mark_pool_distr : pool_distr,
+    stake_set : snapshot,
+    stake_go : snapshot,
+    fee : coin,
+  ]
+non_myopic =
+  [
+    likelihoods : { * key_hash<stake_pool> => likelihood },
+    reward_pot : coin,
+  ]
+pool_distr =
+  [
+    distr : { * key_hash<stake_pool> => individual_pool_stake },
+    total_active_stake : compactform_coin,
+  ]
+individual_pool_stake =
+  [
+    stake : rational,
+    stake_coin : compactform_coin,
+    vrf : vrf_ver_key_hash<stake_pool_vrf>,
+  ]
+rational = #6.30([ int, int ])
+stake = vmap<credential<staking>, compactform_coin>
+vmap<k, v> = { * k => v }
+snapshot =
+  [
+    stake : stake,
+    delegations : vmap<credential<staking>, key_hash<stake_pool>>,
+    pool_params : vmap<key_hash<stake_pool>, pool_params>,
+  ]
+ledger_state =
+  [
+    cert_state : cert_state,
+    utxo_state : utxo_state
+  ]
+cert_state =
+  [
+    cert_v_state : v_state,
+    cert_p_state : p_state,
+    cert_d_state : d_state
+  ]
+v_state =
+  [
+    dreps : { * credential_dreprole => drep_state },
+    committee_state : committee_state,
+    number_of_dormant_epochs: epoch_no
+  ]
+committee_state = { * credential_coldcommitteerole => committee_authorization }
+committee_authorization = #6.121(credential_hotcommitteerole) / #6.122(maybe<anchor>)
+p_state =
+  [
+    stake_pool_params : { * keyhash_stakepool => pool_params },
+    future_stake_pool_params : { * keyhash_stakepool => pool_params },
+    retiring : { * keyhash_stakepool => epoch_no },
+    deposits : { * keyhash_stakepool => coin }
+  ]
+; pool_params is derived via CBORGroup, encoded as a definite-length list
+pool_params =
+  [
+    id : keyhash_stakepool,
+    vrf : vrf_ver_key_hash<stakepoolvrf>,
+    pledge : coin,
+    cost : coin,
+    margin : unit_interval,
+    reward_account : reward_account,
+    owners : set<keyhash_staking>,
+    relays : strictseq<stake_pool_relay>,
+    metadata : null_maybe<pool_metadata>
+  ]
+pool_metadata =
+  [
+    url : bytes,
+    hash : bytes
+  ]
+stake_pool_relay =
+  [
+    0,
+    null_maybe<port>,
+    null_maybe<ipv4>,
+    null_maybe<ipv6>,
+  ] /
+  [
+    1,
+    null_maybe<port>,
+    null_maybe<dns_name>,
+  ] /
+  [
+    2,
+    null_maybe<dns_name>,
+  ]
+port = uint
+ipv4 = bytes
+ipv6 = bytes
+dns_name = text
+; wrapper for seq which uses the same encoding: https://github.com/IntersectMBO/cardano-base/blob/5b2244205b17b99196172684584778e3fec69ed7/cardano-binary/src/Cardano/Binary/ToCBOR.hs#L690-L716
+; it's essentially just a list but definite-length encoding is used for short seqs and indefinite-length is used for long ones
+strictseq<a0> = [a0]
+reward_account = bytes
+keyhash_staking = bytes
+
+vrf_ver_key_hash<a0> = bytes
+null_maybe<a0> = null / a0
+d_state =
+  [
+    unified : umap,
+    future_gen_delegs : { * future_gen_deleg => gen_deleg_pair },
+    gen_delegs : gen_delegs,
+    i_rewards : instantaneous_rewards 
+  ]
+umap = 
+  [
+    elems : map<credential, um_elem>,
+    pointers : map<pointer, credential>
+  ]
+pointer =
+  [
+    slot_no,
+    tx_ix,
+    cert_ix
+  ]
+tx_ix = int
+cert_ix = int
+um_elem =
+  [
+    reward_deposit : strict_maybe<rdpair>,
+    pointer_set : set<pointer>,
+    s_pool : strict_maybe<keyhash_stakepool>,
+    drep : strict_maybe<drep>,
+  ]
+rdpair =
+  [
+    reward : compactform_coin,
+    deposit : compactform_coin,
+  ]
+drep =
+  [
+    0, ; key hash
+    key_hash : key_hash<drep_role>,
+  ] /
+  [ 
+    1, ; script hash
+    script_hash : script_hash,
+  ] /
+  [
+    2 ; always abstain
+  ] /
+  [
+    3 ; no confidence
+  ]
+future_gen_deleg =
+  [
+     slot : slot_no,
+     gen_key_hash : key_hash<genesis>,
+  ]
+gen_deleg_pair =
+  [
+    key_hash : key_hash<genesis_delegate>,
+    vrf_hash : vrf_ver_key_hash<gen_deleg_vrf>,
+  ]
+gen_delegs = { * key_hash<genesis> => gen_deleg_pair }
+instantaneous_rewards =
+  [
+    reserves : { * credential<staking> => coin },
+    treasury : { * credential<staking> => coin },
+    delta_reserves : delta_coin,
+    delta_treasury : delta_coin,
+  ]
+delta_coin = int
+utxo_state =
+  [
+    utxo : utxo,
+    deposited : coin,
+    fees : coin,
+    gov_state : gov_state,
+    stake_distr : incremental_stake,
+    donation : coin
+  ]
+compactform_coin = int
+incremental_stake =
+  [
+    credential_map : { * credential_staking => compactform_coin },
+    pointer_map : { * pointer => compactform_coin }
+  ]
+gov_state =
+  [
+    proposals : proposals,
+    committee : maybe<committee>,
+    constitution : constitution,
+    current_pparams : pparams,
+    previous_pparams : pparams,
+    future_pparams : future_pparams,
+    drep_pulsing_state : drep_pulsing_state
+  ]
+
+drep_pulsing_state = 
+  [
+    snapshot : pulsing_snapshot,
+    ratify_state : ratify_state
+  ]
+
+pulsing_snapshot =
+  [
+    proposals : strictseq<gov_action_state>,
+    drep_distribution : { * rep => compactform_coin },
+    drep_state : { * credential => drep_state },
+    pool_distribution : { * key_hash => compactform_coin }
+  ]
+gov_action_state =
+  [
+    id : gov_action_id,
+    committee_votes : { * credential_hotcommitteerole => vote },
+    drep_votes : { * credential_dreprole => vote },
+    stake_pool_votes : { * keyhash_stakepool => vote },
+    proposal_procedure : proposal_procedure,
+    proposed_in : epoch_no,
+    expires_after : epoch_no,
+  ]
+gov_action_id =
+  [
+    tx_id,
+    gov_action_ix,
+  ]
+tx_id = bytes
+gov_action_ix = int
+drep_state = 
+  [
+    drep_expiry : epochno,
+    drep_anchor : maybe<anchor>,
+    drep_deposit : coin,
+    drep_delegs : set<credential> 
+  ]
+
+future_pparams =
+  #6.121([]) / #6.122([pparams]) / #6.123([maybe<pparams>])
+
+constitution =
+  [
+    anchor : anchor
+    script : maybe<script_hash>
+  ]
+
+anchor = 
+  [
+    url : text,
+    data_hash : bytes
+  ]
+
+maybe<a0> = #6.121([]) / #6.122([a0])
+
+committee =
+  [
+    members : { * credential => int },
+    threshold : unit_interval
+  ]
+
+unit_interval = #6.30([int, int])
+
+; see https://github.com/pragma-org/amaru/blob/8b8c09badb59cc49f13d2d723d2a9e6c37a2d173/crates/amaru/src/bin/amaru/cmd/import_ledger_state.rs#L278-L282
+proposals =
+  [
+    roots : proposal_roots,
+    props : [* gov_action_state]
+  ]
+proposal_roots = gov_relation<strict_maybe>
+gov_relation = 
+  [
+    pparam_update : strict_maybe<gov_purpose_id<pparam_update_purpose>>,
+    hard_fork : strict_maybe<gov_purpose_id<hard_fork_purpose>>,
+    committee : strict_maybe<gov_purpose_id<committee_purpose>>,
+    constitution : strict_maybe<gov_purpose_id<constitution_purpose>>
+  ]
+gov_purpose_id<p> = gov_action_id
+; see https://github.com/txpipe/pallas/blob/a97bd93cdc55fa2b061a6ad5fd572f5528a912b8/pallas-network/src/miniprotocols/localstate/queries_v16/mod.rs#L581-L583
+proposal_procedure =
+  [
+    deposit : coin,
+    return_address : reward_account,
+    gov_action : gov_action,
+    anchor : anchor,
+  ]
+gov_action =
+  [
+    0, ; parameter change
+    previous_governance_action_id : null_strict_maybe<gov_purpose_id<pparam_update_purpose>>,
+    proposed_pparams_update : pparams_update,
+    policy_hash_protection : null_strict_maybe<script_hash>,
+  ] /
+  [
+    1, ; hard fork initiation
+    previous_governance_action_id : null_strict_maybe<gov_purpose_id<hard_fork_purpose>>,
+    proposed_new_protocol_version : prot_ver
+  ] /
+  [
+    2, ; treasury withdrawals
+    proposed_withdrawals : { * reward_account => coin },
+    policy_hash_protection : null_strict_maybe<script_hash>,
+  ] / 
+  [
+    3, ; no confidence
+    previous_governance_action_id : null_strict_maybe<committee_purpose>,
+  ] /
+  [
+    4, ; update committee
+    previous_governance_action_id : null_strict_maybe<gov_purpose_id<committee_purpose>>,
+    old_constitutional_committee_members : set<credential_coldcommitteerole>,
+    new_constitutional_committee_members : {* credential_coldcommitteerole => epoch_no },
+    new_threshold : unit_interval
+  ] / 
+  [
+    5, ; new constitution
+    previous_governance_action_id : null_strict_maybe<gov_purpose_id<constitution_purpose>>,
+    constitution : constitution,
+  ] /
+  [
+    6 ; info action
+  ]
+utxo = 
+  {* transaction_input => transaction_output
+  }
+
+transaction_input = [transaction_id : transaction_id, index : uint .size 2]
+transaction_output = shelley_transaction_output/ babbage_transaction_output
+shelley_transaction_output = [address, amount : value, ? hash32]
+babbage_transaction_output = 
+  {0 : address, 1 : value, ? 2 : datum_option, ? 3 : script_ref}
+
+coin = uint
+credential = [0, addr_keyhash // 1, script_hash]
+
+script_hash = hash28
+hash28 = bytes .size 28
+hash32 = bytes .size 32
+
+; See https://github.com/IntersectMBO/cardano-ledger/blob/b7f6382de3e64cb3009e5804b486b8c37edb69cf/libs/cardano-ledger-binary/src/Cardano/Ledger/Binary/Encoding/Encoder.hs#L463-L483
+set<a0> = #6.258([* a0])
+
+epoch_no = int
+strict_maybe<a0> = [] / [a0]
+address = bytes
+value = coin/ [coin, multiasset<positive_coin>]
+
+datum_option = [0, hash32// 1, data]
+
+data = #6.24(bytes .cbor plutus_data)
+
+plutus_data =
+  constr<plutus_data
+  >
+  / {* plutus_data => plutus_data}
+  / [* plutus_data]
+  / big_int
+  / bounded_bytes
+
+constr<a0
+> =
+  #6.121([* a0])
+  / #6.122([* a0])
+  / #6.123([* a0])
+  / #6.124([* a0])
+  / #6.125([* a0])
+  / #6.126([* a0])
+  / #6.127([* a0])
+  / #6.102([uint, [* a0]])
+
+big_int = int/ big_uint/ big_nint
+
+big_uint = #6.2(bounded_bytes)
+
+bounded_bytes = bytes .size (0 .. 64)
+
+script_ref = #6.24(bytes .cbor script)
+
+script =
+  [  0, native_script
+  // 1, plutus_v1_script
+  // 2, plutus_v2_script
+  // 3, plutus_v3_script
+  ]
+
+  native_script =
+  [  script_pubkey
+  // script_all
+  // script_any
+  // script_n_of_k
+  // invalid_before
+  // invalid_hereafter
+  ]
+
+
+script_pubkey = (0, addr_keyhash)
+
+addr_keyhash = hash28
+
+script_all = (1, [* native_script])
+
+script_any = (2, [* native_script])
+
+script_n_of_k = (3, n : int64, [* native_script])
+
+int64 = -9223372036854775808 .. 9223372036854775807
+
+invalid_before = (4, slot_no)
+
+invalid_hereafter = (5, slot_no)
+
+plutus_v1_script = bytes
+plutus_v2_script = bytes
+plutus_v3_script = bytes
+
+certificates = nonempty_set<certificate>
+
+nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
+
+stake_credential = credential
+
+pool_keyhash = hash28

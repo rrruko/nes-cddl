@@ -1,0 +1,8 @@
+[package]
+name = "nes-cddl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ciborium = "0.2.2"
+cddl = "0.9.5"
