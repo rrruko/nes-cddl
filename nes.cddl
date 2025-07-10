@@ -8,7 +8,7 @@ new_epoch_state =
     pool_distribution : pool_distr,
     stashed_avvm_addresses : stashed_avvm_addresses
   ]
-blocks_made = { * key_hash<stake_pool> => uint }
+blocks_made = {* key_hash<stake_pool> => uint }
 pulsing_rew_update = 
   [ 
     0, ; pulsing
@@ -27,24 +27,24 @@ reward_snapshot =
     delta_r1 : coin,
     r : coin,
     delta_t1 : coin,
-    likelihoods : { * key_hash<stake_pool> => likelihood },
-    leaders : { * credential<staking> => set<reward> }
+    likelihoods : {* key_hash<stake_pool> => likelihood },
+    leaders : {* credential<staking> => set<reward> }
   ]
 likelihood = [float]
 pulser =
   [
     n : int,
     free : freevars,
-    balance : { * credential<staking> => compactform_coin },
+    balance : {* credential<staking> => compactform_coin },
     ans : reward_ans
   ]
 freevars = 
   [
-    delegs : { * credential<staking> => key_hash<stake_pool> },
+    delegs : {* credential<staking> => key_hash<stake_pool> },
     addrs_rew : set<credential<staking>>,
     total_stake : coin,
     prot_ver : prot_ver,
-    pool_reward_info : { * key_hash<stake_pool> => pool_reward_info }
+    pool_reward_info : {* key_hash<stake_pool> => pool_reward_info }
   ]
 prot_ver =
   [
@@ -124,9 +124,11 @@ individual_pool_stake =
     stake_coin : compactform_coin,
     vrf : vrf_ver_key_hash<stake_pool_vrf>,
   ]
-rational = #6.30([ int, int ])
-stake = vmap<credential<staking>, compactform_coin>
+foobar<a0> = #6.121([]) / #6.122([a0])
+foo = #6.121([])
+rational = #6.30([int, int])
 vmap<k, v> = { * k => v }
+stake = vmap<credential<staking>, compactform_coin>
 snapshot =
   [
     stake : stake,
@@ -203,6 +205,7 @@ strictseq<a0> = [a0]
 reward_account = bytes
 keyhash_staking = bytes
 
+key_hash<a0> = bytes
 vrf_ver_key_hash<a0> = bytes
 null_maybe<a0> = null / a0
 d_state =
@@ -302,11 +305,27 @@ drep_pulsing_state =
     snapshot : pulsing_snapshot,
     ratify_state : ratify_state
   ]
-
+ratify_state =
+  [
+    enact_state : enact_state,
+    enacted: [* gov_action_state],
+    expired: [* gov_action_id],
+    delayed: bool
+  ]
+enact_state =
+  [
+    committee: strict_maybe<committee>,
+    constitution: constitution,
+    current_pparams: pparams,
+    previous_pparams: pparams,
+    treasury: coin,
+    withdrawals: { * credential => coin },
+    prev_gov_action_ids: gov_relation,
+  ] 
 pulsing_snapshot =
   [
     proposals : strictseq<gov_action_state>,
-    drep_distribution : { * rep => compactform_coin },
+    drep_distribution : { * drep => compactform_coin },
     drep_state : { * credential => drep_state },
     pool_distribution : { * key_hash => compactform_coin }
   ]
@@ -338,6 +357,9 @@ drep_state =
 future_pparams =
   #6.121([]) / #6.122([pparams]) / #6.123([maybe<pparams>])
 
+; pparams can technically be of any encodable type in the cardano-ledger
+; codebase but in practice are always integers
+pparams = [int]
 constitution =
   [
     anchor : anchor
@@ -366,7 +388,7 @@ proposals =
     roots : proposal_roots,
     props : [* gov_action_state]
   ]
-proposal_roots = gov_relation<strict_maybe>
+proposal_roots = gov_relation
 gov_relation = 
   [
     pparam_update : strict_maybe<gov_purpose_id<pparam_update_purpose>>,

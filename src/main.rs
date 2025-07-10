@@ -1,18 +1,12 @@
-use cddl::cddl_from_str;
-use cddl::validator::Validator;
-use cddl::validator::cbor::CBORValidator;
+use cddl_cat::validate_cbor_bytes;
 use ciborium;
 use std::fs;
 use std::fs::File;
 
 fn main() {
-    let input = fs::read_to_string("nes.cddl").unwrap();
-    let cddl = cddl_from_str(&input, true).unwrap();
-    let cbor_file = File::open("nes1.cbor").unwrap();
-    let cbor = ciborium::de::from_reader(cbor_file).unwrap();
-    let mut cv = CBORValidator::new(&cddl, cbor, None);
-    let v = cv.validate();
-    match v {
+    let cddl_input = fs::read_to_string("nes.cddl").unwrap();
+    let cbor_bytes = fs::read("nes1.cbor").unwrap();
+    match validate_cbor_bytes("new_epoch_state", &cddl_input, &cbor_bytes) {
         Ok(()) => println!("valid!"),
         Err(e) => println!("invalid: {}", e)
     }
