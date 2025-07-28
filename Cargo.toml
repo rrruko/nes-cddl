@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 ciborium = "0.2.2"
-cddl-cat = "0.6.2"
+cddl = "0.9.5"
